@@ -45,7 +45,7 @@ namespace ymd {
     {
       if(!buffer){
 	view.reset(new T[size * dim]{});
-	buffer = view[0];
+	buffer = view.get();
       }
     }
     DimensionalBuffer(): DimensionalBuffer{std::size_t(1),std::size_t(1)}  {}
