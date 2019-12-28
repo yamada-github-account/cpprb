@@ -145,6 +145,10 @@ namespace ymd {
       auto tmp = v->load(std::memory_order_acquire);
       while(tmp < N &&  !v->compare_exchange_weak(tmp,N)){}
     }
+    static inline auto wrap_around(volatile type* v,T N){
+      auto tmp = v->load(std::memory_order_acquire);
+      while(tmp >= N && !v->compare_exchange_weak(tmp,tmp-N)){}
+    }
   };
 
   template<typename T> struct ThreadSafe<false,T>{
@@ -160,6 +164,9 @@ namespace ymd {
     }
     static inline auto store_max(T* v,T N){
       if(*v < N){ *v = N; }
+    }
+    static inline auto wrap_around(T* v,T N){
+      if(*v >= N){ *v -= N; }
     }
   };
 
