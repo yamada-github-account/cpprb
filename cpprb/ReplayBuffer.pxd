@@ -25,3 +25,9 @@ cdef extern from "ReplayBuffer.hh" namespace "ymd":
         void update_priorities[I,P](I*,P*,size_t)
         Prio get_max_priority()
         void set_eps(Prio)
+    cdef cppclass RingIndex:
+        RingIndex(size_t)
+        size_t fetch_add(size_t)
+    cdef cppclass ThreadSafeRingIndex:
+        ThreadSafeRingIndex(size_t)
+        size_t fetch_add(size_t)
