@@ -170,6 +170,36 @@ namespace ymd {
     }
   };
 
+  template<bool MultiThread=false> class RingIndex {
+  public:
+    using Index_t = ThreadSafe<MultiThread,std::size_t>;
+  private:
+    typename Index_t::type index;
+    std::size_t buffer_size;
+  public:
+    RingIndex() = default;
+    RingIndex(std::size_t buffer_size): index{0}, buffer_size{buffer_size} {}
+    RingIndex(const RingIndex&) = default;
+    RingIndex(RingIndex&&) = default;
+    RingIndex& operator=(const RingIndex&) = default;
+    RingIndex& operator=(RingIndex&&) = default;
+    ~RingIndex() = default;
+    RingIndex& operator=(const std::size_t idx){
+      Index_t::store(this->index,idx,std::memory_order_release);
+      return this;
+    }
+    inline operator std::size_t() const {
+      return Index_t::load(this->index,std::memory_order_acquire);
+    }
+    inline auto fetch_add(std::size_t N){
+      auto ret = Index_t::fetch_add(this->index,N);
+      Index_t::wrap_around(this->index,this->buffer_size);
+      return ret;
+    }
+  };
+
+  using ThreadSafeRingIndex = RingIndex<true>;
+
   template<typename Observation,typename Action,typename Reward,typename Done>
   class CppSelectiveEnvironment :public Environment<Observation,Action,Reward,Done>{
   public:
