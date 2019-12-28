@@ -185,15 +185,15 @@ namespace ymd {
     RingIndex& operator=(RingIndex&&) = default;
     ~RingIndex() = default;
     RingIndex& operator=(const std::size_t idx){
-      Index_t::store(this->index,idx,std::memory_order_release);
+      Index_t::store(& this->index,idx,std::memory_order_release);
       return this;
     }
     inline operator std::size_t() const {
-      return Index_t::load(this->index,std::memory_order_acquire);
+      return Index_t::load(& this->index,std::memory_order_acquire);
     }
     inline auto fetch_add(std::size_t N){
-      auto ret = Index_t::fetch_add(this->index,N);
-      Index_t::wrap_around(this->index,this->buffer_size);
+      auto ret = Index_t::fetch_add(& this->index,N);
+      Index_t::wrap_around(& this->index,this->buffer_size);
       return ret;
     }
   };
