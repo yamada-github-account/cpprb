@@ -192,7 +192,7 @@ namespace ymd {
       return Index_t::load(& this->index,std::memory_order_acquire);
     }
     inline auto fetch_add(std::size_t N){
-      auto ret = Index_t::fetch_add(& this->index,N);
+      auto ret = Index_t::fetch_add(& this->index,N,std::memory_order_release);
       Index_t::wrap_around(& this->index,this->buffer_size);
       return ret;
     }
