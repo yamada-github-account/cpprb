@@ -1,0 +1,16 @@
+name: Design Study
+
+on: [push]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@master
+      - run: $CXX -o RingIndex RingIndex.cc
+        run: ./RingIndex
+        working-directory: './design_study'
