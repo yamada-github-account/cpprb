@@ -11,6 +11,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }}
     steps:
       - uses: actions/checkout@master
-      - run: $CXX -o RingIndex RingIndex.cc
-        run: ./RingIndex
-        working-directory: './design_study'
+      - working-directory: './design_study'
+        run: |
+          $CXX -o RingIndex RingIndex.cc
+          ./RingIndex
