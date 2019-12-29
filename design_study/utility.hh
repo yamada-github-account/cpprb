@@ -26,9 +26,11 @@ public:
   }
 };
 
-template<typename F,typename...Args> auto measure(F&& f,Args&&...args){
+template<typename F,typename...Args> auto measure(F&& f,std::size_t N,Args&&...args){
   auto start = std::chrono::high_resolution_clock::now();
-  f(std::forward<Args>(args)...);
+  for(std::size_t i = 0; i < N; ++i){
+    f(std::forward<Args>(args)...);
+  }
   auto end = std::chrono::high_resolution_clock::now();
 
   return std::duration_cast<std::chrono::nanoseconds>(end - start).count();
