@@ -5,6 +5,8 @@ dist
 *.c
 *.html
 *.md
+*.s
+*.out
 cpprb/PyReplayBuffer.cpp
 cpprb/PySegmentTree.cpp
 cpprb/VectorWrapper.cpp
