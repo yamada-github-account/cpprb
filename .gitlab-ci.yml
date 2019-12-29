@@ -190,3 +190,15 @@ repo:
     - tags
   except:
     - branches
+
+RingIndex:
+  <<: *setup
+  stage: test
+  script:
+    - $CXX -S -o design_study/RingIndex.s design_study/RingIndex.cc
+    - $CXX -o design_study/RingIndex design_study/RingIndex.cc
+    - design_study/RingIndex
+  when: manual
+  artifacts:
+    paths:
+      - design_study/*.s
