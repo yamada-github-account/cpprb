@@ -1,6 +1,7 @@
 #ifndef CPPRB_UTILITY_HH
 #define CPPRB_UTILITY_HH
 
+#include <iostream>
 #include <chrono>
 #include <cmath>
 #include <utility>
@@ -23,6 +24,13 @@ public:
   double Std() const {
     auto ave = Average();
     return (double)std::sqrt(xx/N - ave*ave);
+  }
+  void stat() const {
+    std::cout << Average()
+	      << " +/- "
+	      << Std()
+	      << " ns"
+	      << std::endl;
   }
 };
 
