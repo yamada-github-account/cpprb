@@ -1057,7 +1057,7 @@ cdef class ReplayBuffer:
 
         for i in range(n_env):
             obs[i+shift] = np.reshape(np.array(envs[i],copy=False,ndmin=2),
-                                      self.env_dict[name]["add_shape"])
+                                      self.env_dict[obs_name]["add_shape"])
 
         not_ready = True
 
