@@ -1056,10 +1056,10 @@ cdef class ReplayBuffer:
             envs.append(env_factory())
 
         for i in range(n_env):
-            obs[i+shift] = np.reshape(np.array(envs[i],copy=False,ndmin=2),
-                                      self.env_dict[obs_name]["add_shape"])
+            self.obs[i+shift] = np.reshape(np.array(envs[i],copy=False,ndmin=2),
+                                           self.env_dict[obs_name]["add_shape"])
 
-        not_ready = True
+        self.not_ready = True
 
         while True:
             while not_reday:
@@ -1069,10 +1069,10 @@ cdef class ReplayBuffer:
                 ret = envs[i].step(obs[i+shift],act[i+shift])
                 for j in range(n_returns):
                    kwargs[env_returns[j]] = ret[j]
-                obs[i+shift] = kwargs[obs_name]
+                self.obs[i+shift] = kwargs[obs_name]
 
             self.add(**kwargs)
-            not_ready = True
+            self.not_ready = True
 
 
 @cython.embedsignature(True)
