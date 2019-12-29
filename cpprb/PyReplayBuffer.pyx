@@ -1069,7 +1069,7 @@ cdef class ReplayBuffer:
                 ret = envs[i].step(obs[i+shift],act[i+shift])
                 for j in range(n_returns):
                    kwargs[env_returns[j]] = ret[j]
-                obs[i+shift] = adds[obs_name]
+                obs[i+shift] = kwargs[obs_name]
 
             self.add(**kwargs)
             not_ready = True
