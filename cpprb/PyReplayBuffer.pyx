@@ -1062,11 +1062,11 @@ cdef class ReplayBuffer:
         self.not_ready = True
 
         while True:
-            while not_reday:
+            while self.not_reday:
                 pass
 
             for i in range(n_env):
-                ret = envs[i].step(obs[i+shift],act[i+shift])
+                ret = envs[i].step(self.obs[i+shift],self.act[i+shift])
                 for j in range(n_returns):
                    kwargs[env_returns[j]] = ret[j]
                 self.obs[i+shift] = kwargs[obs_name]
