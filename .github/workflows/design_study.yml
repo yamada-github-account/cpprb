@@ -13,5 +13,5 @@ jobs:
       - uses: actions/checkout@master
       - working-directory: './design_study'
         run: |
-          g++ -std=c++2a -O3 -I../cpprb -Wall -Wextra -o RingIndex RingIndex.cc
+          g++ -std=c++17 -O3 -I../cpprb -Wall -Wextra -o RingIndex RingIndex.cc
           ./RingIndex
