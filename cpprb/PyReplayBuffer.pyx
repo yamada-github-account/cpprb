@@ -750,14 +750,17 @@ cdef class ReplayBuffer:
     cdef StepChecker size_check
     cdef NstepBuffer nstep
     cdef bool use_nstep
+    cdef bool enable_shared
 
     def __cinit__(self,size,env_dict=None,*,
                   next_of=None,stack_compress=None,default_dtype=None,Nstep=None,
+                  enable_shared = False,
                   **kwargs):
         self.env_dict = env_dict or {}
         self.buffer_size = size
         self.stored_size = 0
         self.index = 0
+        self.enable_shared = enable_shared
 
         self.compress_any = stack_compress
         self.stack_compress = np.array(stack_compress,ndmin=1,copy=False)
@@ -1005,6 +1008,72 @@ cdef class ReplayBuffer:
 
         if self.cache is not None:
             self.add_cache()
+
+    def explore(self,env_factory,policy,*,
+                max_episode_step=None, n_env=64, n_parallel=1):
+        """
+        Run exploration
+
+        Parameters
+        ----------
+        env_factory : function-like
+            Factory function (or functor) creating an environment. Multiple call
+            must return different instances if the environment has internal state.
+        plicy : functor
+            Actor functor to get action(s) from observation(s). The actor must have
+            a member function `update(*args)`
+        max_episode_step : int (optional)
+            Maximum step size in a single episode. If the value is `None` (default),
+            the episode will not terminate until `done=1`.
+        n_env : int (optional)
+            Number of environments, whose default is 64.
+        n_parallel : int (optional)
+            Number of parallel exploration, whose default is 1.
+
+        Returns
+        -------
+
+        """
+        if not self.enable_shared:
+            return False
+
+
+        pass
+
+    cdef void _run(self,env_factory,
+                   env_returns,
+                   obs_name,
+                   next_obs_name,
+                   size_t max_episode_step,
+                   size_t n_env,size_t shift):
+        cdef list envs = []
+        cdef dict kwargs = {}
+        cdef size_t i = 0
+        cdef size_t j = 0
+        cdef size_t n_returns = np.asarray(env_returns).shape[0]
+
+        for i in range(n_env):
+            envs.append(env_factory())
+
+        for i in range(n_env):
+            obs[i+shift] = np.reshape(np.array(envs[i],copy=False,ndmin=2),
+                                      self.env_dict[name]["add_shape"])
+
+        not_ready = True
+
+        while True:
+            while not_reday:
+                pass
+
+            for i in range(n_env):
+                ret = envs[i].step(obs[i+shift],act[i+shift])
+                for j in range(n_returns):
+                   kwargs[env_returns[j]] = ret[j]
+                obs[i+shift] = adds[obs_name]
+
+            self.add(**kwargs)
+            not_ready = True
+
 
 @cython.embedsignature(True)
 cdef class PrioritizedReplayBuffer(ReplayBuffer):
