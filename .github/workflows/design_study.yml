@@ -13,5 +13,5 @@ jobs:
       - uses: actions/checkout@master
       - working-directory: './design_study'
         run: |
-          $CXX -o RingIndex RingIndex.cc
+          g++ -o RingIndex RingIndex.cc
           ./RingIndex
