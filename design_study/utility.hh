@@ -41,7 +41,7 @@ template<typename F,typename...Args> auto measure(F&& f,std::size_t N,Args&&...a
   }
   auto end = std::chrono::high_resolution_clock::now();
 
-  return std::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 }
 
 
