@@ -1,5 +1,28 @@
 import time
 from multiprocessing import Lock
+import platform
+
+import pyximport
+
+# https://stackoverflow.com/questions/21938065/how-to-configure-pyximport-to-always-make-a-cpp-file
+old_get_distutils_extension = pyximport.pyximport.get_distutils_extension
+
+def new_get_distutils_extension(modname, pyxfilename, language_level=None):
+    extension_mod, setup_args = old_get_distutils_extension(modname, pyxfilename, language_level)
+    extension_mod.language='c++'
+
+    if platform.system() != 'Windows':
+        extension_mod.extra_compile_args = ["-std=c++17"]
+        extension_mod.extra_liink_args = ["-std=c++17","-pthread"]
+    else:
+        extension_mod.extra_compile_args = ["/std:c++17"]
+    return extension_mod,setup_args
+
+pyximport.pyximport.get_distutils_extension = new_get_distutils_extension
+
+pyximport.install(language_level=3,
+                  inplace=True,
+                  setup_args={'include_dirs':['../cpprb']})
 
 from CyRingIndex import CyThreadSafeRingIndex
 
