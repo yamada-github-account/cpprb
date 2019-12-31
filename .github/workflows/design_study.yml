@@ -17,6 +17,6 @@ jobs:
           ./RingIndex
       - uses: actions/setup-python@v1
         with:
-          python-version 3.7
+          python-version: '3.7'
       - working-directory: './design_study'
         run: python RingIndex.py
