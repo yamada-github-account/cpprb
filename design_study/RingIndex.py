@@ -1,3 +1,4 @@
+import math
 import time
 from multiprocessing import Lock
 import platform
@@ -45,7 +46,7 @@ class Stat:
 
     def Std(self):
         ave = self.Average()
-        return (self.xx/self.N - ave*ave)
+        return math.sqrt(self.xx/self.N - ave*ave)
 
     def stat(self,*,name=None):
         print(f"{name}: {self.Average()} +/- {self.Std()} s")
