@@ -2,6 +2,8 @@
 # cython: linetrace=True
 
 import ctypes
+import multiprocessing as mp
+
 cimport numpy as np
 import numpy as np
 import cython
@@ -384,7 +386,16 @@ cdef class SelectiveReplayBuffer(SelectiveEnvironment):
         cdef idx = np.random.randint(0,self.get_stored_size(),batch_size)
         return self._encode_sample(idx)
 
-def dict2buffer(buffer_size,env_dict,*,stack_compress = None,default_dtype = None):
+def shared_ndarray(shape,dtype):
+    shape = np.asarray(shape)
+    _ctype = np.ctypeslib.as_ctypes_type(dtype)
+
+    memory = mp.sharedctypes.RawArray(_ctype,shape.prod())
+    return np.lib.stride_tricks.as_strided(np.ctypeslib.as_array(memory),
+                                           shape=shape)
+
+def dict2buffer(buffer_size,env_dict,*,
+                stack_compress = None,default_dtype = None, enable_shared = False):
     """Create buffer from env_dict
 
     Parameters
@@ -397,6 +408,8 @@ def dict2buffer(buffer_size,env_dict,*,stack_compress = None,default_dtype = Non
         compress memory of specified stacked values.
     default_dtype : numpy.dtype, optional
         fallback dtype for not specified in `env_dict`. default is numpy.single
+    enable_shared : bool, optional
+        use shared memory for `multiprocessing`. default is `Fault`
 
     Returns
     -------
@@ -406,6 +419,12 @@ def dict2buffer(buffer_size,env_dict,*,stack_compress = None,default_dtype = Non
     cdef buffer = {}
     cdef bool compress_any = stack_compress
     default_dtype = default_dtype or np.single
+
+    if enable_shared:
+        create_array = shared_ndarray
+    else:
+        create_array = np.zeros
+
     for name, defs in env_dict.items():
         shape = np.insert(np.asarray(defs.get("shape",1)),0,buffer_size)
 
@@ -415,14 +434,14 @@ def dict2buffer(buffer_size,env_dict,*,stack_compress = None,default_dtype = Non
             buffer_shape = np.insert(np.delete(shape,-1),1,shape[-1])
             buffer_shape[0] += buffer_shape[1] - 1
             buffer_shape[1] = 1
-            memory = np.zeros(buffer_shape,
-                              dtype=defs.get("dtype",default_dtype))
+            memory = create_array(buffer_shape,
+                                  dtype=defs.get("dtype",default_dtype))
             strides = np.append(np.delete(memory.strides,1),memory.strides[1])
             buffer[name] = np.lib.stride_tricks.as_strided(memory,
                                                            shape=shape,
                                                            strides=strides)
         else:
-            buffer[name] = np.zeros(shape,dtype=defs.get("dtype",default_dtype))
+            buffer[name] = create_array(shape,dtype=defs.get("dtype",default_dtype))
 
         shape[0] = -1
         defs["add_shape"] = shape
