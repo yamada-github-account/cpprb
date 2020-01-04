@@ -1080,7 +1080,10 @@ cdef class ReplayBuffer:
 def explore_func(buffer,env_dict,env_factory,
                  policy,pre_add_func,post_step_func,
                  n_env,n_parallel,max_episode_step,default_dtype,*,
-                 obs_name='obs', act_name='act', next_obs_name='next_obs_name'):
+                 obs_name='obs',
+                 act_name='act',
+                 next_obs_name='next_obs_name',
+                 done_name='done'):
 
     cdef size_t i = 0
     cdef size_t N_env = n_env
@@ -1115,10 +1118,14 @@ def explore_func(buffer,env_dict,env_factory,
     cdef obs = shared_buffer[obs_name]
     cdef act = shared_buffer[act_name]
     cdef next_obs = shared_buffer[next_obs_name]
+    cdef done = shared_buffer[done_name]
 
     cdef size_t n = N_env - last_env
     cdef size_t last_env = (N_parallel-1)*i_env
     cdef list envs = []
+
+    cdef size_t max_step = max_episode_step
+    cdef size_t [::1] step = np.zeros(n,dtype=np.dtype(ctypes.c_size_t))
 
     for i in range(n):
         envs.append(env_factory())
@@ -1133,9 +1140,13 @@ def explore_func(buffer,env_dict,env_factory,
 
     while True:
         for i in range(n):
+            if done[last_env + i] or step[i] >= max_step:
+                obs[last_env + i] = envs[i].reset()
+                step[i] = 0
             for k,v in post_step_func(envs[i].step(act[last_env + i])).items():
                 shared_buffer[k][last_env + i] = v
-        
+            step[i] += 1
+
         while not waiting_policy.all():
             pass
 
