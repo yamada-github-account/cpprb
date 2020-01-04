@@ -2,7 +2,7 @@
 # cython: linetrace=True
 
 import ctypes
-import multiprocessing
+from multiprocessing import Process
 from multiprocessing.sharedctypes import RawArray, RawValue
 
 cimport numpy as np
