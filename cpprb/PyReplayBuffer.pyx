@@ -1122,6 +1122,30 @@ def _stepping_func(env_factory,
 
         waiting_policy = True
 
+def _adding_func(buffer, policy, shared_buffer, waiting_policy,*,
+                 obs_name = 'obs',
+                 next_obs_name = 'next_obs',
+                 act_name = 'act',
+                 pre_add_func = None):
+
+    cdef obs = shared_buffer[obs_name]
+    cdef act = shared_buffer[act_name]
+    cdef next_obs = shared_buffer[next_obs_name]
+
+    if pre_add_func is None:
+        pre_add_func = lambda p,b: b
+
+    while True:
+        if not waiting_policy.all():
+            continue
+
+        kwargs = pre_add_func(policy,shared_buffer)
+
+        buffer.add(**kwargs)
+        act = policy(obs)
+        obs[:] = next_obs[:]
+
+        waiting_policy[:] = False
 
 @cython.embedsignature(True)
 cdef class PrioritizedReplayBuffer(ReplayBuffer):
