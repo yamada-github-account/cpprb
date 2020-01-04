@@ -1127,6 +1127,7 @@ def _adding_func(buffer, policy, shared_buffer, waiting_policy,*,
     cdef obs = shared_buffer[obs_name]
     cdef act = shared_buffer[act_name]
     cdef next_obs = shared_buffer[next_obs_name]
+    cdef size_t total_step = 0
 
     if pre_add_func is None:
         pre_add_func = lambda p,b: b
@@ -1134,6 +1135,7 @@ def _adding_func(buffer, policy, shared_buffer, waiting_policy,*,
     while True:
         if not waiting_policy.all():
             continue
+        total_step += 1
 
         kwargs = pre_add_func(policy,shared_buffer)
 
