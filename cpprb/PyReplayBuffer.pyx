@@ -1070,25 +1070,85 @@ cdef class ReplayBuffer:
             return False
 
         env_dict = env_dict or self.env_dict
-        shared_buffer = dict2buffer(n_env,env_dict,
-                                    default_dtype = self.default_dtype,
-                                    enable_shared = True)
+        self.process = Process(target=explore_func,
+                               args=(self,env_dict,env_factory,
+                                     policy,pre_add_func,post_step_func,
+                                     n_env,n_parallel,max_episode_step),
+                               kwargs={"default_dtype": self.default_dtype})
 
-        waiting_policy = dict2buffer(n_parallel,{"_": {"dtype": ctypes.c_bool}},
-                                     enable_shared = True)["_"]
 
-        self.start_adding_process(policy=policy,
-                                  shared_buffer=shared_buffer,
-                                  not_ready = not_ready,
-                                  pre_add_func=pre_add_func,
-                                  n_env=n_env)
+def explore_func(buffer,env_dict,env_factory,
+                 policy,pre_add_func,post_step_func,
+                 n_env,n_parallel,max_episode_step,default_dtype,*,
+                 obs_name='obs', act_name='act', next_obs_name='next_obs_name'):
 
-        self.start_stepping_process(env_factory=env_factory,
-                                    shared_buffer=shared_buffer,
-                                    waiting_policy = waiting_policy,
-                                    post_step_func=post_step_func,
-                                    n_env=n_env,
-                                    n_parallel=n_parallel)
+    cdef size_t i = 0
+    cdef size_t N_env = n_env
+    cdef size_t N_parallel = n_parallel
+    cdef size_t i_env = N_env / N_parallel
+
+    cdef shared_buffer = dict2buffer(N_env,env_dict,
+                                     default_dtype = default_dtype,
+                                     enable_shared = True)
+
+    cdef waiting_policy = dict2buffer(n_parallel-1,{"_": {"dtype": ctypes.c_bool}},
+                                      enable_shared = True)["_"]
+    waiting_policy[:] = False
+
+
+    cdef list step_process = []
+    cdef dict step_kwargs = {"obs_name": obs_name,
+                             "act_name": act_name,
+                             "max_episode_step": max_episode_step}
+
+    for i in range(N_parallel-1):
+        step_process.append(Process(target=_stepping_func,
+                                    args=(env_factory,
+                                          shared_buffer[i*i_env:(i+1)*i_env],
+                                          waiting_policy[i:i+1],
+                                          post_step_func,
+                                          i_env),
+                                          kwargs=step_kwargs))
+
+        step_process[i].start()
+
+    cdef obs = shared_buffer[obs_name]
+    cdef act = shared_buffer[act_name]
+    cdef next_obs = shared_buffer[next_obs_name]
+
+    cdef size_t n = N_env - last_env
+    cdef size_t last_env = (N_parallel-1)*i_env
+    cdef list envs = []
+
+    for i in range(n):
+        envs.append(env_factory())
+
+    for i in range(n):
+        obs[last_env + i] = envs[i].reset()
+
+    cdef size_t total_step = 0
+
+    if pre_add_func is None:
+        pre_add_func = lambda p,b: b
+
+    while True:
+        for i in range(n):
+            for k,v in post_step_func(envs[i].step(act[last_env + i])).items():
+                shared_buffer[k][last_env + i] = v
+        
+        while not waiting_policy.all():
+            pass
+
+        total_step += 1
+
+        kwargs = pre_add_func(policy,shared_buffer)
+
+        buffer.add(**kwargs)
+        act = policy(obs)
+        obs[:] = next_obs[:]
+
+        waiting_policy[:] = False
+
 
 def _stepping_func(env_factory,shared_buffer,waiting_policy,post_step_func,n_env,*,
                    obs_name = 'obs',
@@ -1100,50 +1160,24 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,post_step_func,n_env
     cdef obs = shared_buffer[obs_name]
     cdef act = shared_buffer[act_name]
 
+    waiting_policy[0] = False
+
     for i in range(n):
         envs.append(env_factory())
 
     for i in range(n):
         obs[i] = envs[i].reset()
 
-    waiting_policy = True
-
     while True:
-        if waiting_policy:
+        if waiting_policy[0]:
             continue
 
         for i in range(n):
             for k,v in post_step_func(envs[i].step(act[i])).items():
                 shared_buffer[k][i] = v
 
-        waiting_policy = True
+        waiting_policy[0] = True
 
-def _adding_func(buffer, policy, shared_buffer, waiting_policy,*,
-                 obs_name = 'obs',
-                 next_obs_name = 'next_obs',
-                 act_name = 'act',
-                 pre_add_func = None):
-
-    cdef obs = shared_buffer[obs_name]
-    cdef act = shared_buffer[act_name]
-    cdef next_obs = shared_buffer[next_obs_name]
-    cdef size_t total_step = 0
-
-    if pre_add_func is None:
-        pre_add_func = lambda p,b: b
-
-    while True:
-        if not waiting_policy.all():
-            continue
-        total_step += 1
-
-        kwargs = pre_add_func(policy,shared_buffer)
-
-        buffer.add(**kwargs)
-        act = policy(obs)
-        obs[:] = next_obs[:]
-
-        waiting_policy[:] = False
 
 @cython.embedsignature(True)
 cdef class PrioritizedReplayBuffer(ReplayBuffer):
