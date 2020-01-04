@@ -1090,14 +1090,10 @@ cdef class ReplayBuffer:
                                     n_env=n_env,
                                     n_parallel=n_parallel)
 
-def _stepping_func(env_factory,
-                   shared_buffer,
-                   waiting_policy,
-                   post_step_func,
-                   obs_name,
-                   act_name,
-                   max_episode_step,
-                   n_env):
+def _stepping_func(env_factory,shared_buffer,waiting_policy,post_step_func,n_env,*,
+                   obs_name = 'obs',
+                   act_name = 'act',
+                   max_episode_step = None):
     cdef list envs = []
     cdef size_t i = 0
     cdef size_t n = n_env
