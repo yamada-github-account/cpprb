@@ -1029,8 +1029,9 @@ cdef class ReplayBuffer:
         if self.cache is not None:
             self.add_cache()
 
-    def explore(self,env_factory,policy,*,
-                max_episode_step=None, n_env=64, n_parallel=1):
+    def explore(self,env_factory,policy,post_step_func,*,
+                pre_add_func=None, max_episode_step=None, n_env=64, n_parallel=1,
+                env_dict = None):
         """
         Run exploration
 
@@ -1042,6 +1043,14 @@ cdef class ReplayBuffer:
         plicy : functor
             Actor functor to get action(s) from observation(s). The actor must have
             a member function `update(*args)`
+        post_step_func : functor
+            Function taking returns of `gym.Env.step` (aka. `tuple`) and returning
+            `dict` for `ReplayBuffer.add`
+        pre_add_func : functor, optional
+            Function taking `policy` and environment variables and returning `dict`
+            for `ReplayBuffer.add`. This functor is intended to calculate TD error.
+            If no functor is specified, the environmental variables are added to
+            the replay buffer without modification.
         max_episode_step : int (optional)
             Maximum step size in a single episode. If the value is `None` (default),
             the episode will not terminate until `done=1`.
@@ -1049,6 +1058,9 @@ cdef class ReplayBuffer:
             Number of environments, whose default is 64.
         n_parallel : int (optional)
             Number of parallel exploration, whose default is 1.
+        env_dict : dict, optional
+            Environment definition `dict`. If no dict is specified (default),
+            `self.env_dict` is used.
 
         Returns
         -------
@@ -1057,43 +1069,58 @@ cdef class ReplayBuffer:
         if not self.enable_shared:
             return False
 
+        env_dict = env_dict or self.env_dict
+        shared_buffer = dict2buffer(n_env,env_dict,
+                                    default_dtype = self.default_dtype,
+                                    enable_shared = True)
 
-        pass
+        waiting_policy = dict2buffer(n_parallel,{"_": {"dtype": ctypes.c_bool}},
+                                     enable_shared = True)["_"]
 
-    cdef void _run(self,env_factory,
-                   env_returns,
+        self.start_adding_process(policy=policy,
+                                  shared_buffer=shared_buffer,
+                                  not_ready = not_ready,
+                                  pre_add_func=pre_add_func,
+                                  n_env=n_env)
+
+        self.start_stepping_process(env_factory=env_factory,
+                                    shared_buffer=shared_buffer,
+                                    waiting_policy = waiting_policy,
+                                    post_step_func=post_step_func,
+                                    n_env=n_env,
+                                    n_parallel=n_parallel)
+
+def _stepping_func(env_factory,
+                   shared_buffer,
+                   waiting_policy,
+                   post_step_func,
                    obs_name,
-                   next_obs_name,
-                   size_t max_episode_step,
-                   size_t n_env,size_t shift):
-        cdef list envs = []
-        cdef dict kwargs = {}
-        cdef size_t i = 0
-        cdef size_t j = 0
-        cdef size_t n_returns = np.asarray(env_returns).shape[0]
-        cdef obs_shape = self.env_dict[obs_name]["add_shape"]
+                   act_name,
+                   max_episode_step,
+                   n_env):
+    cdef list envs = []
+    cdef size_t i = 0
+    cdef size_t n = n_env
+    cdef obs = shared_buffer[obs_name]
+    cdef act = shared_buffer[act_name]
 
-        for i in range(n_env):
-            envs.append(env_factory())
+    for i in range(n):
+        envs.append(env_factory())
 
-        for i in range(n_env):
-            self.obs[i+shift] = np.reshape(np.array(envs[i],copy=False,ndmin=2),
-                                           obs_shape)
+    for i in range(n):
+        obs[i] = envs[i].reset()
 
-        self.not_ready = True
+    waiting_policy = True
 
-        while True:
-            while self.not_reday:
-                pass
+    while True:
+        if waiting_policy:
+            continue
 
-            for i in range(n_env):
-                ret = envs[i].step(self.obs[i+shift],self.act[i+shift])
-                for j in range(n_returns):
-                   kwargs[env_returns[j]] = ret[j]
-                self.obs[i+shift] = kwargs[obs_name]
+        for i in range(n):
+            for k,v in post_step_func(envs[i].step(act[i])).items():
+                shared_buffer[k][i] = v
 
-            self.add(**kwargs)
-            self.not_ready = True
+        waiting_policy = True
 
 
 @cython.embedsignature(True)
