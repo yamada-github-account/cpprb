@@ -2,7 +2,8 @@
 # cython: linetrace=True
 
 import ctypes
-import multiprocessing as mp
+import multiprocessing
+from multiprocessing.sharedctypes import RawArray, RawValue
 
 cimport numpy as np
 import numpy as np
@@ -390,7 +391,7 @@ def shared_ndarray(shape,dtype):
     shape = np.asarray(shape)
     _ctype = np.ctypeslib.as_ctypes_type(dtype)
 
-    memory = mp.sharedctypes.RawArray(_ctype,shape.prod())
+    memory = RawArray(_ctype,shape.prod())
     return np.lib.stride_tricks.as_strided(np.ctypeslib.as_array(memory),
                                            shape=shape)
 
