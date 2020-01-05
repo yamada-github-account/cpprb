@@ -1146,7 +1146,7 @@ cdef class ReplayBuffer:
         This function is valid only after `ReplayBuffer.explore` is called
         """
         if self.is_running:
-            self.queue.get(weights)
+            self.queue.put(weights)
 
 def explore_func(buffer,env_dict,env_factory,
                  policy,pre_add_func,post_step_func,
