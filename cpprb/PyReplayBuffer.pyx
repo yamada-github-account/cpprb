@@ -1031,7 +1031,11 @@ cdef class ReplayBuffer:
 
     def explore(self,env_factory,policy,post_step_func,*,
                 pre_add_func=None, max_episode_step=None, n_env=64, n_parallel=1,
-                env_dict = None):
+                env_dict = None,
+                obs_name = 'obs',
+                act_name = 'act',
+                next_obs_name = 'next_obs',
+                done_name = 'done'):
         """
         Run exploration
 
@@ -1061,6 +1065,14 @@ cdef class ReplayBuffer:
         env_dict : dict, optional
             Environment definition `dict`. If no dict is specified (default),
             `self.env_dict` is used.
+        obs_name : str, optional
+            observetion name. The default is 'obs'.
+        act_name : str, optional
+            action name. The default is 'act'.
+        next_obs_name : str, optional
+            next observation name. The default is 'next_obs'.
+        done_name : str, optional
+            done name. The default is 'done'
 
         Returns
         -------
@@ -1074,7 +1086,11 @@ cdef class ReplayBuffer:
                                args=(self,env_dict,env_factory,
                                      policy,pre_add_func,post_step_func,
                                      n_env,n_parallel,max_episode_step),
-                               kwargs={"default_dtype": self.default_dtype})
+                               kwargs={"default_dtype": self.default_dtype,
+                                       'obs_name': obs_name,
+                                       'act_name': act_name,
+                                       'next_obs_name': next_obs_name,
+                                       'done_name': done_name})
 
 
 def explore_func(buffer,env_dict,env_factory,
