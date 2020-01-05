@@ -26,7 +26,9 @@ class TestPerallelExplore(unittest.TestCase):
                            "done": {}},
                           enable_shared = True)
 
-        self.assertEqual(rb.explore(env_func,policy,post),True)
+        self.assertEqual(rb.explore(env_func,policy,post,
+                                    n_env = 16,
+                                    n_parallel = 8),True)
 
 if __name__ == "__main__":
     unittest.main()
