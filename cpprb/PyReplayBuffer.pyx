@@ -1189,10 +1189,11 @@ def explore_func(buffer,env_dict,env_factory,
     for i in range(N_parallel-1):
         step_process.append(Process(target=_stepping_func,
                                     args=(env_factory,
-                                          shared_buffer[i*i_env:(i+1)*i_env],
+                                          shared_buffer,
                                           waiting_policy[i],
                                           pre_step_func,
                                           post_step_func,
+                                          i*i_env,
                                           i_env),
                                           kwargs=step_kwargs))
 
@@ -1253,7 +1254,7 @@ def explore_func(buffer,env_dict,env_factory,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def _stepping_func(env_factory,shared_buffer,waiting_policy,
-                   pre_step_func,post_step_func,n_env,*,
+                   pre_step_func,post_step_func,shift,n_env,*,
                    obs_name = 'obs',
                    act_name = 'act',
                    done_name = 'done',
@@ -1261,10 +1262,11 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,
     cdef list envs = []
     cdef size_t i = 0
     cdef size_t n = n_env
+    cdef size_t _shift = shift
 
-    cdef obs = shared_buffer[obs_name]
-    cdef act = shared_buffer[act_name]
-    cdef done = shared_buffer[done_name]
+    cdef obs = shared_buffer[obs_name][_shift:_shift+n]
+    cdef act = shared_buffer[act_name][_shift:_shift+n]
+    cdef done = shared_buffer[done_name][_shift:_shift+n]
 
     cdef size_t max_step = max_episode_step
     cdef size_t[::1] step = np.zeros(n_env,dtype=np.dtype(ctypes.c_size_t))
