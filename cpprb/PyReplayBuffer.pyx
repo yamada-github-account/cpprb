@@ -1201,7 +1201,7 @@ def explore_func(buffer,env_dict,env_factory,
     cdef size_t n = N_env - last_env
     cdef list envs = []
 
-    cdef size_t max_step = max_episode_step
+    cdef size_t max_step = max_episode_step if max_episode_step else -1
     cdef size_t [::1] step = np.zeros(n,dtype=np.dtype(ctypes.c_size_t))
 
     for i in range(n):
