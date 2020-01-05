@@ -2,7 +2,7 @@
 # cython: linetrace=True
 
 import ctypes
-from multiprocessing import Process, Lock
+from multiprocessing import Process, RLock
 from multiprocessing.sharedctypes import RawArray, RawValue
 
 cimport numpy as np
@@ -785,7 +785,7 @@ cdef class ReplayBuffer:
         self.index = 0
         self.enable_shared = enable_shared
         self.is_running = False
-        self.lock = Lock() if self.enable_shared else None
+        self.lock = RLock() if self.enable_shared else None
         self.process = None
 
         self.compress_any = stack_compress
@@ -873,6 +873,8 @@ cdef class ReplayBuffer:
 
         cdef size_t N = self.size_check.step_size(kwargs)
 
+        if self.is_running:
+            self.lock.acquire()
         cdef size_t index = self.index
         cdef size_t end = index + N
         cdef size_t remain = 0
@@ -898,6 +900,8 @@ cdef class ReplayBuffer:
 
         self.stored_size = min(self.stored_size + N,self.buffer_size)
         self.index = end if end < self.buffer_size else remain
+        if self.is_running:
+            self.lock.release()
         return index
 
     def _encode_sample(self,idx):
@@ -972,11 +976,17 @@ cdef class ReplayBuffer:
         >>> rb.get_next_index()
         0
         """
+        if self.is_running:
+            self.lock.acquire()
+
         self.index = 0
         self.stored_size = 0
 
         if self.use_nstep:
             self.nstep.clear()
+
+        if self.is_running:
+            self.lock.release()
 
     cpdef size_t get_stored_size(self):
         """Get stored size
@@ -1108,8 +1118,7 @@ cdef class ReplayBuffer:
                                        'obs_name': obs_name,
                                        'act_name': act_name,
                                        'next_obs_name': next_obs_name,
-                                       'done_name': done_name,
-                                       'lock': self.lock})
+                                       'done_name': done_name})
         self.is_running = True
         self.process.start()
         return True
@@ -1120,8 +1129,7 @@ def explore_func(buffer,env_dict,env_factory,
                  obs_name='obs',
                  act_name='act',
                  next_obs_name='next_obs_name',
-                 done_name='done',
-                 lock = None):
+                 done_name='done'):
 
     cdef size_t i = 0
     cdef size_t N_env = n_env
@@ -1141,9 +1149,6 @@ def explore_func(buffer,env_dict,env_factory,
     cdef dict step_kwargs = {"obs_name": obs_name,
                              "act_name": act_name,
                              "max_episode_step": max_episode_step}
-
-    if lock is None:
-        lock = Lock()
 
     for i in range(N_parallel-1):
         step_process.append(Process(target=_stepping_func,
@@ -1195,8 +1200,7 @@ def explore_func(buffer,env_dict,env_factory,
 
         kwargs = pre_add_func(policy,total_step,shared_buffer)
 
-        with lock:
-            buffer.add(**kwargs)
+        buffer.add(**kwargs)
         act = policy(obs)
         obs[:] = next_obs[:]
 
@@ -1329,6 +1333,10 @@ cdef class PrioritizedReplayBuffer(ReplayBuffer):
             if priorities is not None:
                 priorities = priorities["priorities"]
 
+
+        if self.is_running:
+            self.lock.acquire()
+
         cdef maybe_index = super().add(**kwargs)
         if maybe_index is None:
             return None
@@ -1350,6 +1358,8 @@ cdef class PrioritizedReplayBuffer(ReplayBuffer):
                 self.unchange_since_sample[index:] = False
                 self.unchange_since_sample[:index+N-self.buffer_size] = False
 
+        if self.is_running:
+            self.lock.release()
         return index
 
     def sample(self,batch_size,beta = 0.4):
@@ -1409,6 +1419,8 @@ cdef class PrioritizedReplayBuffer(ReplayBuffer):
         cdef size_t [:] idx = Csize(indexes)
         cdef float [:] ps = Cfloat(priorities)
 
+        if self.is_running:
+            self.lock.acquire()
         cdef size_t _idx = 0
         if self.check_for_update:
             for _i in range(idx.shape[0]):
@@ -1423,14 +1435,20 @@ cdef class PrioritizedReplayBuffer(ReplayBuffer):
         cdef N = idx.shape[0]
         if N > 0:
             self.per.update_priorities(&idx[0],&ps[0],N)
+        if self.is_running:
+            self.lock.release()
 
     cpdef void clear(self) except *:
         """Clear replay buffer
         """
+        if self.is_running:
+            self.lock.acquire()
         super(PrioritizedReplayBuffer,self).clear()
         clear(self.per)
         if self.use_nstep:
             self.priorities_nstep.clear()
+        if self.is_running:
+            self.lock.release()
 
     cpdef float get_max_priority(self):
         """Get the max priority of stored priorities
