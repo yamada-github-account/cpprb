@@ -1193,8 +1193,8 @@ def explore_func(buffer,env_dict,env_factory,
     cdef next_obs = shared_buffer[next_obs_name]
     cdef done = shared_buffer[done_name]
 
-    cdef size_t n = N_env - last_env
     cdef size_t last_env = (N_parallel-1)*i_env
+    cdef size_t n = N_env - last_env
     cdef list envs = []
 
     cdef size_t max_step = max_episode_step
