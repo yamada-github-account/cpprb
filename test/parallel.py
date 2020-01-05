@@ -5,7 +5,8 @@ import multiprocessing
 import numpy as np
 from cpprb import ReplayBuffer, PrioritizedReplayBuffer
 
-@unittest.skipIf(multiprocessing.cpu_count() < 2)
+@unittest.skipIf(multiprocessing.cpu_count() < 2,
+                 "Requires multiple cpu")
 class TestPerallelExplore(unittest.TestCase):
     def test_explore(self):
 
