@@ -3,6 +3,7 @@ import unittest
 import multiprocessing
 
 import numpy as np
+import gym
 from cpprb import ReplayBuffer, PrioritizedReplayBuffer
 
 @unittest.skipIf(multiprocessing.cpu_count() < 2,
