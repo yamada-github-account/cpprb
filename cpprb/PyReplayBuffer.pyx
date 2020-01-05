@@ -1219,7 +1219,7 @@ def explore_func(buffer,env_dict,env_factory,
     cdef size_t total_step = 0
 
     if pre_add_func is None:
-        pre_add_func = lambda p,b: b
+        pre_add_func = lambda p,step,b: b
 
     if update_policy_func is None:
         update_policy_func = lambda p,w: None
