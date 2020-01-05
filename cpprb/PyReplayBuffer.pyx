@@ -1102,6 +1102,7 @@ cdef class ReplayBuffer:
                                        'act_name': act_name,
                                        'next_obs_name': next_obs_name,
                                        'done_name': done_name})
+        self.is_running = True
         self.process.start()
         return True
 
