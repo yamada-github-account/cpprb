@@ -1161,7 +1161,7 @@ def explore_func(buffer,env_dict,env_factory,
     cdef size_t i = 0
     cdef size_t N_env = n_env
     cdef size_t N_parallel = n_parallel
-    cdef size_t i_env = N_env / N_parallel
+    cdef size_t i_env = N_env // N_parallel
 
     cdef shared_buffer = dict2buffer(N_env,env_dict,
                                      default_dtype = default_dtype,
