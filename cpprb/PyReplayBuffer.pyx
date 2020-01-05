@@ -1190,7 +1190,7 @@ def explore_func(buffer,env_dict,env_factory,
         step_process.append(Process(target=_stepping_func,
                                     args=(env_factory,
                                           shared_buffer[i*i_env:(i+1)*i_env],
-                                          waiting_policy[i:i+1],
+                                          waiting_policy[i],
                                           pre_step_func,
                                           post_step_func,
                                           i_env),
@@ -1269,7 +1269,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,
     cdef size_t max_step = max_episode_step
     cdef size_t[::1] step = np.zeros(n_env,dtype=np.dtype(ctypes.c_size_t))
 
-    waiting_policy[0] = False
+    waiting_policy = False
 
     for i in range(n):
         envs.append(env_factory())
@@ -1278,7 +1278,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,
         obs[i] = envs[i].reset()
 
     while True:
-        if waiting_policy[0]:
+        if waiting_policy:
             continue
 
         for i in range(n):
@@ -1289,7 +1289,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,
                 shared_buffer[k][i] = v
             step[i] += 1
 
-        waiting_policy[0] = True
+        waiting_policy = True
 
 
 @cython.embedsignature(True)
