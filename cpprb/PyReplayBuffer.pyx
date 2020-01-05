@@ -1174,7 +1174,7 @@ def explore_func(buffer,env_dict,env_factory,
 
         total_step += 1
 
-        kwargs = pre_add_func(policy,shared_buffer)
+        kwargs = pre_add_func(policy,total_step,shared_buffer)
 
         buffer.add(**kwargs)
         act = policy(obs)
