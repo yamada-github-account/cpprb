@@ -1268,7 +1268,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,
     cdef act = shared_buffer[act_name][_shift:_shift+n]
     cdef done = shared_buffer[done_name][_shift:_shift+n]
 
-    cdef size_t max_step = max_episode_step
+    cdef size_t max_step = max_episode_step if max_episode_step else -1
     cdef size_t[::1] step = np.zeros(n_env,dtype=np.dtype(ctypes.c_size_t))
 
     waiting_policy = False
