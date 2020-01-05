@@ -1076,7 +1076,12 @@ cdef class ReplayBuffer:
 
         Returns
         -------
+        success : bool
+            `True` when exploring processes run, otherwise `False`
 
+        Notes
+        -----
+        This member function can work only when `enable_shared = True` in constructor.
         """
         if not self.enable_shared:
             return False
@@ -1091,7 +1096,8 @@ cdef class ReplayBuffer:
                                        'act_name': act_name,
                                        'next_obs_name': next_obs_name,
                                        'done_name': done_name})
-
+        self.process.start()
+        return True
 
 def explore_func(buffer,env_dict,env_factory,
                  policy,pre_add_func,post_step_func,
