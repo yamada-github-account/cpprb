@@ -2,7 +2,7 @@
 # cython: linetrace=True
 
 import ctypes
-from multiprocessing import Process
+from multiprocessing import Process, Lock
 from multiprocessing.sharedctypes import RawArray, RawValue
 
 cimport numpy as np
@@ -771,6 +771,9 @@ cdef class ReplayBuffer:
     cdef NstepBuffer nstep
     cdef bool use_nstep
     cdef bool enable_shared
+    cdef bool is_running
+    cdef lock
+    cdef process
 
     def __cinit__(self,size,env_dict=None,*,
                   next_of=None,stack_compress=None,default_dtype=None,Nstep=None,
@@ -781,6 +784,9 @@ cdef class ReplayBuffer:
         self.stored_size = 0
         self.index = 0
         self.enable_shared = enable_shared
+        self.is_running = False
+        self.lock = Lock() if self.enable_shared else None
+        self.process = None
 
         self.compress_any = stack_compress
         self.stack_compress = np.array(stack_compress,ndmin=1,copy=False)
