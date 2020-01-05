@@ -2,7 +2,7 @@
 # cython: linetrace=True
 
 import ctypes
-from multiprocessing import Process, RLock
+from multiprocessing import Process, RLock, Queue
 from multiprocessing.sharedctypes import RawArray, RawValue
 
 cimport numpy as np
@@ -774,6 +774,7 @@ cdef class ReplayBuffer:
     cdef bool is_running
     cdef lock
     cdef process
+    cdef queue
 
     def __cinit__(self,size,env_dict=None,*,
                   next_of=None,stack_compress=None,default_dtype=None,Nstep=None,
@@ -787,6 +788,7 @@ cdef class ReplayBuffer:
         self.is_running = False
         self.lock = RLock() if self.enable_shared else None
         self.process = None
+        self.queue = Queue() if self.enable_shared else None
 
         self.compress_any = stack_compress
         self.stack_compress = np.array(stack_compress,ndmin=1,copy=False)
@@ -1049,7 +1051,11 @@ cdef class ReplayBuffer:
             self.add_cache()
 
     def explore(self,env_factory,policy,post_step_func,*,
-                pre_add_func=None, max_episode_step=None, n_env=64, n_parallel=1,
+                pre_add_func = None,
+                update_policy_func = None,
+                max_episode_step = None,
+                n_env = 64,
+                n_parallel = 1,
                 env_dict = None,
                 obs_name = 'obs',
                 act_name = 'act',
@@ -1074,6 +1080,8 @@ cdef class ReplayBuffer:
             for `ReplayBuffer.add`. This functor is intended to calculate TD error.
             If no functor is specified, the environmental variables are added to
             the replay buffer without modification.
+        update_policy_func : functor, optional
+            Function to update policy with passed values
         max_episode_step : int (optional)
             Maximum step size in a single episode. If the value is `None` (default),
             the episode will not terminate until `done=1`.
@@ -1118,10 +1126,27 @@ cdef class ReplayBuffer:
                                        'obs_name': obs_name,
                                        'act_name': act_name,
                                        'next_obs_name': next_obs_name,
-                                       'done_name': done_name})
+                                       'done_name': done_name,
+                                       'queue': self.queue})
         self.is_running = True
         self.process.start()
         return True
+
+    def update_policy(self,weights):
+        """
+        Update running policy with new weights
+
+        Parameters
+        ----------
+        weights : object (picklable)
+            Weights to be passed to running policy.
+
+        Notes
+        -----
+        This function is valid only after `ReplayBuffer.explore` is called
+        """
+        if self.is_running:
+            self.queue.get(weights)
 
 def explore_func(buffer,env_dict,env_factory,
                  policy,pre_add_func,post_step_func,
@@ -1129,7 +1154,9 @@ def explore_func(buffer,env_dict,env_factory,
                  obs_name='obs',
                  act_name='act',
                  next_obs_name='next_obs_name',
-                 done_name='done'):
+                 done_name='done',
+                 queue = None,
+                 update_policy_func = None):
 
     cdef size_t i = 0
     cdef size_t N_env = n_env
@@ -1184,6 +1211,9 @@ def explore_func(buffer,env_dict,env_factory,
     if pre_add_func is None:
         pre_add_func = lambda p,b: b
 
+    if update_policy_func is None:
+        update_policy_func = lambda p,w: None
+
     while True:
         for i in range(n):
             if done[last_env + i] or step[i] >= max_step:
@@ -1201,6 +1231,10 @@ def explore_func(buffer,env_dict,env_factory,
         kwargs = pre_add_func(policy,total_step,shared_buffer)
 
         buffer.add(**kwargs)
+
+        if (queue is not None) and not queue.empty():
+            update_policy_func(policy,queue.get())
+
         act = policy(obs)
         obs[:] = next_obs[:]
 
