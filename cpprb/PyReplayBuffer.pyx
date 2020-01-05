@@ -1087,9 +1087,13 @@ cdef class ReplayBuffer:
 
         Notes
         -----
-        This member function can work only when `enable_shared = True` in constructor.
+        This member function can work only when `enable_shared = True`, no memory
+        compression features (`next_of` and `stack_compress`), and no Nstep feature.
         """
-        if not self.enable_shared:
+        if (not self.enable_shared
+            or self.use_nstep
+            or self.compress_any
+            or self.has_next_of):
             return False
 
         env_dict = env_dict or self.env_dict
