@@ -1370,6 +1370,8 @@ cdef class PrioritizedReplayBuffer(ReplayBuffer):
 
         The sampling probabilities are propotional to :math:`priorities ^ {-'beta'}`
         """
+        if self.is_running:
+            self.lock.acquire()
         self.per.sample(batch_size,beta,
                         self.weights.vec,self.indexes.vec,
                         self.get_stored_size())
@@ -1381,6 +1383,8 @@ cdef class PrioritizedReplayBuffer(ReplayBuffer):
         if self.check_for_update:
             self.unchange_since_sample[:] = True
 
+        if self.is_running:
+            self.lock.release()
         return samples
 
     def update_priorities(self,indexes,priorities):
