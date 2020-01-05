@@ -1166,6 +1166,7 @@ def explore_func(buffer,env_dict,env_factory,
         N_parallel = cpu_count()
 
     cdef size_t i_env = N_env // N_parallel
+    cdef size_t max_step = max_episode_step if max_episode_step else -1
 
     cdef shared_buffer = dict2buffer(N_env,env_dict,
                                      default_dtype = default_dtype,
@@ -1179,7 +1180,7 @@ def explore_func(buffer,env_dict,env_factory,
     cdef list step_process = []
     cdef dict step_kwargs = {"obs_name": obs_name,
                              "act_name": act_name,
-                             "max_episode_step": max_episode_step}
+                             "max_episode_step": max_step}
 
     if env_dict.get(act_name,{"size": 1}).get("size",1) == 1:
         pre_step_func = lambda a: a[0]
@@ -1208,7 +1209,6 @@ def explore_func(buffer,env_dict,env_factory,
     cdef size_t n = N_env - last_env
     cdef list envs = []
 
-    cdef size_t max_step = max_episode_step if max_episode_step else -1
     cdef size_t [::1] step = np.zeros(n,dtype=np.dtype(ctypes.c_size_t))
 
     for i in range(n):
