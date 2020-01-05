@@ -1181,11 +1181,17 @@ def explore_func(buffer,env_dict,env_factory,
                              "act_name": act_name,
                              "max_episode_step": max_episode_step}
 
+    if env_dict.get(act_name,{"size": 1}).get("size",1) == 1:
+        pre_step_func = lambda a: a[0]
+    else:
+        pre_step_func = lambda a: a
+
     for i in range(N_parallel-1):
         step_process.append(Process(target=_stepping_func,
                                     args=(env_factory,
                                           shared_buffer[i*i_env:(i+1)*i_env],
                                           waiting_policy[i:i+1],
+                                          pre_step_func,
                                           post_step_func,
                                           i_env),
                                           kwargs=step_kwargs))
@@ -1223,7 +1229,7 @@ def explore_func(buffer,env_dict,env_factory,
             if done[last_env + i] or step[i] >= max_step:
                 obs[last_env + i] = envs[i].reset()
                 step[i] = 0
-            for k,v in post_step_func(envs[i].step(act[last_env + i])).items():
+            for k,v in post_step_func(envs[i].step(pre_step_func(act[last_env + i]))).items():
                 shared_buffer[k][last_env + i] = v
             step[i] += 1
 
@@ -1246,7 +1252,8 @@ def explore_func(buffer,env_dict,env_factory,
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def _stepping_func(env_factory,shared_buffer,waiting_policy,post_step_func,n_env,*,
+def _stepping_func(env_factory,shared_buffer,waiting_policy,
+                   pre_step_func,post_step_func,n_env,*,
                    obs_name = 'obs',
                    act_name = 'act',
                    done_name = 'done',
@@ -1278,7 +1285,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,post_step_func,n_env
             if done[i] or step[i] >= max_step:
                 obs[i] = envs[i].reset()
                 step[i] = 0
-            for k,v in post_step_func(envs[i].step(act[i])).items():
+            for k,v in post_step_func(envs[i].step(pre_step_func(act[i]))).items():
                 shared_buffer[k][i] = v
             step[i] += 1
 
