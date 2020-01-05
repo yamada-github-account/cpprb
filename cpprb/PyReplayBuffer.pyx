@@ -775,6 +775,7 @@ cdef class ReplayBuffer:
     cdef lock
     cdef process
     cdef queue
+    cdef terminate_flag
 
     def __cinit__(self,size,env_dict=None,*,
                   next_of=None,stack_compress=None,default_dtype=None,Nstep=None,
@@ -789,6 +790,7 @@ cdef class ReplayBuffer:
         self.lock = RLock() if self.enable_shared else None
         self.process = None
         self.queue = Queue() if self.enable_shared else None
+        self.terminate_flag = None
 
         self.compress_any = stack_compress
         self.stack_compress = np.array(stack_compress,ndmin=1,copy=False)
@@ -1117,6 +1119,10 @@ cdef class ReplayBuffer:
             or self.has_next_of):
             return False
 
+        self.terminate_flag = dict2buffer(1,{"_": {"dtype": ctypes.c_bool}},
+                                          enable_shared = True)["_"][0]
+        self.terminate_flag = False
+
         env_dict = env_dict or self.env_dict
         self.process = Process(target=explore_func,
                                args=(self,env_dict,env_factory,
@@ -1127,7 +1133,8 @@ cdef class ReplayBuffer:
                                        'act_name': act_name,
                                        'next_obs_name': next_obs_name,
                                        'done_name': done_name,
-                                       'queue': self.queue})
+                                       'queue': self.queue,
+                                       'terminate': self.terminate_flag})
         self.is_running = True
         self.process.start()
         return True
@@ -1156,7 +1163,8 @@ def explore_func(buffer,env_dict,env_factory,
                  next_obs_name='next_obs_name',
                  done_name='done',
                  queue = None,
-                 update_policy_func = None):
+                 update_policy_func = None,
+                 terminate = None):
 
     cdef size_t i = 0
     cdef size_t N_env = n_env
@@ -1238,6 +1246,12 @@ def explore_func(buffer,env_dict,env_factory,
             pass
 
         total_step += 1
+
+        if terminate:
+            for p in step_process:
+                p.terminate()
+            else:
+                return True
 
         kwargs = pre_add_func(policy,total_step,shared_buffer)
 
