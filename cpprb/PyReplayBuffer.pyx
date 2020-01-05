@@ -1108,7 +1108,8 @@ cdef class ReplayBuffer:
                                        'obs_name': obs_name,
                                        'act_name': act_name,
                                        'next_obs_name': next_obs_name,
-                                       'done_name': done_name})
+                                       'done_name': done_name,
+                                       'lock': self.lock})
         self.is_running = True
         self.process.start()
         return True
@@ -1119,7 +1120,8 @@ def explore_func(buffer,env_dict,env_factory,
                  obs_name='obs',
                  act_name='act',
                  next_obs_name='next_obs_name',
-                 done_name='done'):
+                 done_name='done',
+                 lock = None):
 
     cdef size_t i = 0
     cdef size_t N_env = n_env
@@ -1139,6 +1141,9 @@ def explore_func(buffer,env_dict,env_factory,
     cdef dict step_kwargs = {"obs_name": obs_name,
                              "act_name": act_name,
                              "max_episode_step": max_episode_step}
+
+    if lock is None:
+        lock = Lock()
 
     for i in range(N_parallel-1):
         step_process.append(Process(target=_stepping_func,
@@ -1190,7 +1195,8 @@ def explore_func(buffer,env_dict,env_factory,
 
         kwargs = pre_add_func(policy,total_step,shared_buffer)
 
-        buffer.add(**kwargs)
+        with lock:
+            buffer.add(**kwargs)
         act = policy(obs)
         obs[:] = next_obs[:]
 
