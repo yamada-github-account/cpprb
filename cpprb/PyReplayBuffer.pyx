@@ -391,7 +391,7 @@ def shared_ndarray(shape,dtype):
     shape = np.asarray(shape)
     _ctype = np.ctypeslib.as_ctypes_type(dtype)
 
-    memory = RawArray(_ctype,shape.prod())
+    memory = RawArray(_ctype,int(shape.prod()))
     return np.lib.stride_tricks.as_strided(np.ctypeslib.as_array(memory),
                                            shape=shape)
 
