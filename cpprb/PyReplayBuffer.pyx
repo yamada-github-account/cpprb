@@ -948,6 +948,9 @@ cdef class ReplayBuffer:
             batch size of samples, which might contains the same event multiple times.
         """
         cdef idx = np.random.randint(0,self.get_stored_size(),batch_size)
+        if self.is_running:
+            with self.lock:
+                return self._encode_sample(idx)
         return self._encode_sample(idx)
 
     cpdef void clear(self) except *:
