@@ -785,10 +785,10 @@ cdef class ReplayBuffer:
         self.buffer_size = size
         self.enable_shared = enable_shared
         self.index = dict2buffer(1,{"": {"dtype": np.dtype(ctypes.c_size_t)}},
-                                 enable_shared=self.enable_shared)[""]
+                                 enable_shared=self.enable_shared)[""][:,0]
         self.index[0] = 0
         self.stored_size = dict2buffer(1,{"": {"dtype": np.dtype(ctypes.c_size_t)}},
-                                       enable_shared=self.enable_shared)[""]
+                                       enable_shared=self.enable_shared)[""][:,0]
         self.stored_size[0] = 0
         self.is_running = False
         self.lock = RLock() if self.enable_shared else None
@@ -1194,7 +1194,7 @@ def explore_func(buffer,env_dict,env_factory,
                                      enable_shared = True)
 
     cdef waiting_policy = dict2buffer(n_parallel-1,{"_": {"dtype": ctypes.c_bool}},
-                                      enable_shared = True)["_"]
+                                      enable_shared = True)["_"][:,0]
     waiting_policy[:] = False
 
 
