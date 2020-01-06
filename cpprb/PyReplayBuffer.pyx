@@ -758,7 +758,7 @@ cdef class ReplayBuffer:
     cdef buffer
     cdef size_t buffer_size
     cdef env_dict
-    cdef size_t index
+    cdef size_t[:] index
     cdef size_t stored_size
     cdef next_of
     cdef bool has_next_of
@@ -784,8 +784,10 @@ cdef class ReplayBuffer:
         self.env_dict = env_dict or {}
         self.buffer_size = size
         self.stored_size = 0
-        self.index = 0
         self.enable_shared = enable_shared
+        self.index = dict2buffer(1,{"": {"dtype": np.dtype(ctypes.c_size_t)}},
+                                 enable_shared=self.enable_shared)[""]
+        self.index[0] = 0
         self.is_running = False
         self.lock = RLock() if self.enable_shared else None
         self.process = None
@@ -879,7 +881,7 @@ cdef class ReplayBuffer:
 
         if self.is_running:
             self.lock.acquire()
-        cdef size_t index = self.index
+        cdef size_t index = self.index[0]
         cdef size_t end = index + N
         cdef size_t remain = 0
         cdef add_idx = np.arange(index,end)
@@ -903,7 +905,7 @@ cdef class ReplayBuffer:
             del self.cache[index]
 
         self.stored_size = min(self.stored_size + N,self.buffer_size)
-        self.index = end if end < self.buffer_size else remain
+        self.index[0] = end if end < self.buffer_size else remain
         if self.is_running:
             self.lock.release()
         return index
@@ -983,7 +985,7 @@ cdef class ReplayBuffer:
         if self.is_running:
             self.lock.acquire()
 
-        self.index = 0
+        self.index[0] = 0
         self.stored_size = 0
 
         if self.use_nstep:
@@ -1020,12 +1022,12 @@ cdef class ReplayBuffer:
         size_t
             the next index to store
         """
-        return self.index
+        return self.index[0]
 
     cdef void add_cache(self):
         """Add last items into cache
         """
-        cdef size_t key = (self.index or self.buffer_size) -1
+        cdef size_t key = (self.index[0] or self.buffer_size) -1
         self.cache[key] = {}
 
         if self.has_next_of:
