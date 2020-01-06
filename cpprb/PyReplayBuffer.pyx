@@ -1208,7 +1208,7 @@ def explore_func(buffer,env_dict,env_factory,
         step_process.append(Process(target=_stepping_func,
                                     args=(env_factory,
                                           shared_buffer,
-                                          waiting_policy[i],
+                                          waiting_policy,i,
                                           pre_step_func,
                                           post_step_func,
                                           i*i_env,
@@ -1243,14 +1243,6 @@ def explore_func(buffer,env_dict,env_factory,
         update_policy_func = lambda p,w: None
 
     while True:
-        for i in range(n):
-            if done[last_env + i] or step[i] >= max_step:
-                obs[last_env + i] = envs[i].reset()
-                step[i] = 0
-            for k,v in post_step_func(envs[i].step(pre_step_func(act[last_env + i]))).items():
-                shared_buffer[k][last_env + i] = v
-            step[i] += 1
-
         while not waiting_policy.all():
             pass
 
@@ -1274,9 +1266,18 @@ def explore_func(buffer,env_dict,env_factory,
 
         waiting_policy[:] = False
 
+        for i in range(n):
+            if done[last_env + i] or step[i] >= max_step:
+                obs[last_env + i] = envs[i].reset()
+                step[i] = 0
+            for k,v in post_step_func(envs[i].step(pre_step_func(act[last_env + i]))).items():
+                shared_buffer[k][last_env + i] = v
+            step[i] += 1
+
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def _stepping_func(env_factory,shared_buffer,waiting_policy,
+def _stepping_func(env_factory,shared_buffer,waiting_policy,i_policy,
                    pre_step_func,post_step_func,shift,n_env,*,
                    obs_name = 'obs',
                    act_name = 'act',
@@ -1294,7 +1295,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,
     cdef size_t max_step = max_episode_step if max_episode_step else -1
     cdef size_t[::1] step = np.zeros(n_env,dtype=np.dtype(ctypes.c_size_t))
 
-    waiting_policy = False
+    waiting_policy[i_policy] = False
 
     for i in range(n):
         envs.append(env_factory())
@@ -1302,9 +1303,10 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,
     for i in range(n):
         obs[i] = envs[i].reset()
 
+    waiting_policy[i_policy] = True
     while True:
-        if waiting_policy:
-            continue
+        while waiting_policy[i_policy]:
+            pass
 
         for i in range(n):
             if done[i] or step[i] >= max_step:
@@ -1314,7 +1316,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,
                 shared_buffer[k][i] = v
             step[i] += 1
 
-        waiting_policy = True
+        waiting_policy[i_policy] = True
 
 
 @cython.embedsignature(True)
