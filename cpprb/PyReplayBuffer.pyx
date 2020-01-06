@@ -906,7 +906,7 @@ cdef class ReplayBuffer:
         if (self.cache is not None) and (index in self.cache):
             del self.cache[index]
 
-        self.stored_size[0] = min(self.stored_size + N,self.buffer_size)
+        self.stored_size[0] = min(self.stored_size[0] + N,self.buffer_size)
         self.index[0] = end if end < self.buffer_size else remain
         if self.is_running:
             self.lock.release()
