@@ -33,7 +33,8 @@ class TestPerallelExplore(unittest.TestCase):
         self.assertEqual(rb.explore(env_func,policy,post,
                                     n_env = 16,
                                     n_parallel = 8),True)
-        time.sleep(10)
+        s = rb.sample(64)
+        time.sleep(20)
         self.assertNotEqual(rb.get_stored_size(),0)
 
         s = rb.sample(128)
