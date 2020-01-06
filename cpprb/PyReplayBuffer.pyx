@@ -1055,9 +1055,9 @@ cdef class ReplayBuffer:
     def terminate(self):
         if self.is_running:
             self.terminate_flag = True
-            ret = self.process.join()
+            self.process.join()
             self.is_running = False
-            return ret
+            return self.process.exitcode
         else:
             return False
 
