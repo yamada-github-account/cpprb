@@ -1255,6 +1255,8 @@ def explore_func(buffer,env_dict,env_factory,
         if terminate:
             for p in step_process:
                 p.terminate()
+            for p in step_process:
+                p.join()
             else:
                 return True
 
