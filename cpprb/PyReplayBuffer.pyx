@@ -1053,8 +1053,13 @@ cdef class ReplayBuffer:
             self.add_cache()
 
     def terminate(self):
-        self.terminate_flag = True
-        return self.process.join()
+        if self.is_running:
+            self.terminate_flag = True
+            ret = self.process.join()
+            self.is_running = False
+            return ret
+        else:
+            return False
 
     def explore(self,env_factory,policy,post_step_func,*,
                 pre_add_func = None,
