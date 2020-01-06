@@ -1,3 +1,4 @@
+import time
 import random
 import unittest
 import multiprocessing
@@ -26,9 +27,17 @@ class TestPerallelExplore(unittest.TestCase):
                            "done": {}},
                           enable_shared = True)
 
+        self.assertEqual(rb.terminate(),False)
+        self.assertEqual(rb.get_next_index(),0)
+        self.assertEqual(rb.get_stored_size(),0)
         self.assertEqual(rb.explore(env_func,policy,post,
                                     n_env = 16,
                                     n_parallel = 8),True)
+        time.sleep(10)
+        self.assertNotEqual(rb.get_stored_size(),0)
+
+        s = rb.sample(128)
+        self.assertEqual(rb.terminate(),0)
 
 if __name__ == "__main__":
     unittest.main()
