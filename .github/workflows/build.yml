@@ -4,6 +4,7 @@ on: [push]
 
 jobs:
   build:
+    timeout-minutes: 5
     strategy:
       matrix:
         runs-on: [ubuntu-latest, macos-latest, windows-latest]
