@@ -776,6 +776,7 @@ cdef class ReplayBuffer:
     cdef process
     cdef queue
     cdef terminate_flag
+    cdef sample_ready
 
     def __cinit__(self,size,env_dict=None,*,
                   next_of=None,stack_compress=None,default_dtype=None,Nstep=None,
@@ -790,6 +791,9 @@ cdef class ReplayBuffer:
         self.stored_size = dict2buffer(1,{"": {"dtype": np.dtype(ctypes.c_size_t)}},
                                        enable_shared=self.enable_shared)[""][:,0]
         self.stored_size[0] = 0
+        self.sample_ready = dict2buffer(1,{"": {"dtype": np.dtype(ctypes.c_bool)}},
+                                        enable_shared=self.enable_shared)[""][:,0]
+        self.sample_ready[0] = False
         self.is_running = False
         self.lock = RLock() if self.enable_shared else None
         self.process = None
@@ -883,6 +887,7 @@ cdef class ReplayBuffer:
 
         if self.is_running:
             self.lock.acquire()
+        self.sample_ready[0] = True
         cdef size_t index = self.index[0]
         cdef size_t end = index + N
         cdef size_t remain = 0
@@ -946,6 +951,17 @@ cdef class ReplayBuffer:
 
         return sample
 
+    cpdef bool ready(self):
+        if self.sample_ready[0]:
+            return True
+
+        if self.is_running:
+            while not self.sample_ready[0]:
+                pass
+            return True
+
+        return False
+
     def sample(self,batch_size):
         """Sample the stored environment randomly with speciped size
 
@@ -959,6 +975,8 @@ cdef class ReplayBuffer:
         sample : dict of ndarray
             batch size of samples, which might contains the same event multiple times.
         """
+        if not self.ready():
+            return None
         cdef idx = np.random.randint(0,self.get_stored_size(),batch_size)
         if self.is_running:
             with self.lock:
@@ -1464,6 +1482,9 @@ cdef class PrioritizedReplayBuffer(ReplayBuffer):
 
         The sampling probabilities are propotional to :math:`priorities ^ {-'beta'}`
         """
+        if not self.ready():
+            return None
+
         if self.is_running:
             self.lock.acquire()
         self.per.sample(batch_size,beta,
