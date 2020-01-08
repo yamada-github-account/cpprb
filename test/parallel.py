@@ -13,7 +13,7 @@ class TestPerallelExplore(unittest.TestCase):
     def test_explore(self):
 
         env_func = lambda : gym.make("FrozenLake-v0")
-        policy = lambda o: random.randint(1,4)
+        policy = lambda o: np.random.random_integers(1,4,size=o.shape)
         post = lambda args: {"next_obs": args[0],
                              "rew": args[1],
                              "done": args[2]}
