@@ -1293,7 +1293,11 @@ def explore_func(buffer,env_dict,env_factory,
             step[i] += 1
 
         while not waiting_policy.all():
-            pass
+            if not queue.empty():
+                update_policy_func(policy,queue.get())
+        else:
+            if not queue.empty():
+                update_policy_func(policy,queue.get())
 
         if terminate:
             for p in step_process:
@@ -1309,9 +1313,6 @@ def explore_func(buffer,env_dict,env_factory,
         buffer.add(**kwargs)
 
         obs[:] = next_obs[:]
-
-        if (queue is not None) and not queue.empty():
-            update_policy_func(policy,queue.get())
 
         act[:] = policy(obs)
 
