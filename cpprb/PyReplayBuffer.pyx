@@ -1257,13 +1257,6 @@ def explore_func(buffer,env_dict,env_factory,
 
     cdef size_t [::1] step = np.zeros(n,dtype=np.dtype(ctypes.c_size_t))
 
-    for i in range(n):
-        envs.append(env_factory())
-
-    for i in range(n):
-        obs[main_base + i] = envs[i].reset()
-
-    cdef size_t total_step = 0
 
     if pre_add is None:
         pre_add = lambda p,step,b: b
@@ -1271,6 +1264,14 @@ def explore_func(buffer,env_dict,env_factory,
     if update_policy_func is None:
         update_policy_func = lambda p,w: None
 
+
+    for i in range(n):
+        envs.append(env_factory())
+
+    for i in range(n):
+        obs[main_base + i] = envs[i].reset()
+
+    cdef size_t total_step = 0
 
     while not waiting_policy.all():
         pass
