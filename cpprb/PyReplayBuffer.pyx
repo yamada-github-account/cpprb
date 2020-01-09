@@ -1279,7 +1279,7 @@ def explore_func(buffer,env_dict,env_factory,
         if (queue is not None) and not queue.empty():
             update_policy_func(policy,queue.get())
 
-        act = policy(obs)
+        act[:] = policy(obs)
         obs[:] = next_obs[:]
 
         waiting_policy[:] = False
