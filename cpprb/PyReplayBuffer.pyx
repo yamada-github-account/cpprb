@@ -1313,7 +1313,6 @@ def explore_func(buffer,env_dict,env_factory,
         buffer.add(**kwargs)
 
         obs[:] = next_obs[:]
-
         act[:] = policy(obs)
 
         waiting_policy[:] = False
