@@ -1233,7 +1233,6 @@ def explore_func(buffer,env_dict,env_factory,
                                           waiting_policy,i,
                                           pre_step,
                                           post_step,
-                                          i*N_env_sub,
                                           N_env_sub),
                                           kwargs=step_kwargs))
 
@@ -1302,7 +1301,7 @@ def explore_func(buffer,env_dict,env_factory,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def _stepping_func(env_factory,shared_buffer,waiting_policy,i_policy,
-                   pre_step,post_step,shift,n_env,*,
+                   pre_step,post_step,n_env,*,
                    obs_name = 'obs',
                    act_name = 'act',
                    done_name = 'done',
@@ -1310,7 +1309,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,i_policy,
     cdef list envs = []
     cdef size_t i = 0
     cdef size_t n = n_env
-    cdef size_t _shift = shift
+    cdef size_t _shift = i*n_env
 
     cdef obs = shared_buffer[obs_name][_shift:_shift+n]
     cdef act = shared_buffer[act_name][_shift:_shift+n]
