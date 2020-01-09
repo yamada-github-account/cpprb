@@ -1264,6 +1264,8 @@ def explore_func(buffer,env_dict,env_factory,
     if update_policy_func is None:
         update_policy_func = lambda p,w: None
 
+    if queue is None:
+        queue = dummy_queue
 
     for i in range(n):
         envs.append(env_factory())
