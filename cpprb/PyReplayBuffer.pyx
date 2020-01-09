@@ -1204,7 +1204,7 @@ def explore_func(buffer,env_dict,env_factory,
     if n_parallel <= 0:
         N_parallel = cpu_count()
 
-    cdef size_t i_env = N_env // N_parallel
+    cdef size_t N_env_sub = N_env // N_parallel
     cdef size_t max_step = max_episode_step if max_episode_step else -1
 
     cdef shared_buffer = dict2buffer(N_env,env_dict,
@@ -1233,8 +1233,8 @@ def explore_func(buffer,env_dict,env_factory,
                                           waiting_policy,i,
                                           pre_step_func,
                                           post_step_func,
-                                          i*i_env,
-                                          i_env),
+                                          i*N_env_sub,
+                                          N_env_sub),
                                           kwargs=step_kwargs))
 
         step_process[i].start()
@@ -1244,8 +1244,8 @@ def explore_func(buffer,env_dict,env_factory,
     cdef next_obs = shared_buffer[next_obs_name]
     cdef done = shared_buffer[done_name]
 
-    cdef size_t last_env = (N_parallel-1)*i_env
-    cdef size_t n = N_env - last_env
+    cdef size_t main_base = (N_parallel-1)*N_env_sub
+    cdef size_t n = N_env - main_base
     cdef list envs = []
 
     cdef size_t [::1] step = np.zeros(n,dtype=np.dtype(ctypes.c_size_t))
@@ -1254,7 +1254,7 @@ def explore_func(buffer,env_dict,env_factory,
         envs.append(env_factory())
 
     for i in range(n):
-        obs[last_env + i] = envs[i].reset()
+        obs[main_base + i] = envs[i].reset()
 
     cdef size_t total_step = 0
 
@@ -1264,11 +1264,10 @@ def explore_func(buffer,env_dict,env_factory,
     if update_policy_func is None:
         update_policy_func = lambda p,w: None
 
+    cdef size_t shift_i
     while True:
         while not waiting_policy.all():
             pass
-
-        total_step += 1
 
         if terminate:
             for p in step_process:
@@ -1277,10 +1276,6 @@ def explore_func(buffer,env_dict,env_factory,
                 p.join()
             else:
                 return True
-
-        kwargs = pre_add_func(policy,total_step,shared_buffer)
-
-        buffer.add(**kwargs)
 
         if (queue is not None) and not queue.empty():
             update_policy_func(policy,queue.get())
@@ -1291,13 +1286,19 @@ def explore_func(buffer,env_dict,env_factory,
         waiting_policy[:] = False
 
         for i in range(n):
-            if done[last_env + i] or step[i] >= max_step:
-                obs[last_env + i] = envs[i].reset()
+            shift_i = main_base + i
+            if done[shift_i] or step[i] >= max_step:
+                obs[shift_i] = envs[i].reset()
                 step[i] = 0
-            for k,v in post_step_func(envs[i].step(pre_step_func(act[last_env + i]))).items():
-                shared_buffer[k][last_env + i] = v
+            for k,v in post_step_func(envs[i].step(pre_step_func(act[shift_i]))).items():
+                shared_buffer[k][shift_i] = v
             step[i] += 1
 
+        total_step += 1
+
+        kwargs = pre_add_func(policy,total_step,shared_buffer)
+
+        buffer.add(**kwargs)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
