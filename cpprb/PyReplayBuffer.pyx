@@ -1263,26 +1263,15 @@ def explore_func(buffer,env_dict,env_factory,
     if update_policy_func is None:
         update_policy_func = lambda p,w: None
 
+
+    while not waiting_policy.all():
+        pass
+
+    act[:] = policy(obs)
+    waiting_policy[:] = False
+
     cdef size_t shift_i
     while True:
-        while not waiting_policy.all():
-            pass
-
-        if terminate:
-            for p in step_process:
-                p.terminate()
-            for p in step_process:
-                p.join()
-            else:
-                return True
-
-        if (queue is not None) and not queue.empty():
-            update_policy_func(policy,queue.get())
-
-        act[:] = policy(obs)
-
-        waiting_policy[:] = False
-
         for i in range(n):
             shift_i = main_base + i
             if done[shift_i] or step[i] >= max_step:
@@ -1295,11 +1284,27 @@ def explore_func(buffer,env_dict,env_factory,
         while not waiting_policy.all():
             pass
 
+        if terminate:
+            for p in step_process:
+                p.terminate()
+            for p in step_process:
+                p.join()
+            else:
+                return True
+
         total_step += 1
 
         kwargs = pre_add(policy,total_step,shared_buffer)
         buffer.add(**kwargs)
+
         obs[:] = next_obs[:]
+
+        if (queue is not None) and not queue.empty():
+            update_policy_func(policy,queue.get())
+
+        act[:] = policy(obs)
+
+        waiting_policy[:] = False
 
 
 @cython.boundscheck(False)
