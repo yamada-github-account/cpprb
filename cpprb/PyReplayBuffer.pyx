@@ -1293,6 +1293,9 @@ def explore_func(buffer,env_dict,env_factory,
                 shared_buffer[k][shift_i] = v
             step[i] += 1
 
+        while not waiting_policy.all():
+            pass
+
         total_step += 1
 
         kwargs = pre_add(policy,total_step,shared_buffer)
