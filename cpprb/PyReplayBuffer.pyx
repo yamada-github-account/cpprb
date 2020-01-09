@@ -1192,7 +1192,7 @@ cdef class dummy_queue:
 
     @staticmethod
     cdef bint empty():
-        return 0
+        return 1
 
 def explore_func(buffer,env_dict,env_factory,
                  policy,pre_add,post_step,
