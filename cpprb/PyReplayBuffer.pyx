@@ -1280,7 +1280,6 @@ def explore_func(buffer,env_dict,env_factory,
             update_policy_func(policy,queue.get())
 
         act[:] = policy(obs)
-        obs[:] = next_obs[:]
 
         waiting_policy[:] = False
 
@@ -1300,6 +1299,8 @@ def explore_func(buffer,env_dict,env_factory,
 
         kwargs = pre_add(policy,total_step,shared_buffer)
         buffer.add(**kwargs)
+        obs[:] = next_obs[:]
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
