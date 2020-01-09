@@ -1085,7 +1085,7 @@ cdef class ReplayBuffer:
 
     def explore(self,env_factory,policy,post_step,*,
                 pre_add = None,
-                update_policy_func = None,
+                update_policy = None,
                 max_episode_step = None,
                 n_env = 64,
                 n_parallel = 1,
@@ -1113,7 +1113,7 @@ cdef class ReplayBuffer:
             for `ReplayBuffer.add`. This functor is intended to calculate TD error.
             If no functor is specified, the environmental variables are added to
             the replay buffer without modification.
-        update_policy_func : functor, optional
+        update_policy : functor, optional
             Function to update policy with passed values
         max_episode_step : int (optional)
             Maximum step size in a single episode. If the value is `None` (default),
@@ -1202,7 +1202,7 @@ def explore_func(buffer,env_dict,env_factory,
                  next_obs_name='next_obs_name',
                  done_name='done',
                  queue = None,
-                 update_policy_func = None,
+                 update_policy = None,
                  terminate = None):
 
     cdef size_t i = 0
@@ -1261,8 +1261,8 @@ def explore_func(buffer,env_dict,env_factory,
     if pre_add is None:
         pre_add = lambda p,step,b: b
 
-    if update_policy_func is None:
-        update_policy_func = lambda p,w: None
+    if update_policy is None:
+        update_policy = lambda p,w: None
 
     if queue is None:
         queue = dummy_queue
@@ -1294,10 +1294,10 @@ def explore_func(buffer,env_dict,env_factory,
 
         while not waiting_policy.all():
             if not queue.empty():
-                update_policy_func(policy,queue.get())
+                update_policy(policy,queue.get())
         else:
             if not queue.empty():
-                update_policy_func(policy,queue.get())
+                update_policy(policy,queue.get())
 
         if terminate:
             for p in step_process:
