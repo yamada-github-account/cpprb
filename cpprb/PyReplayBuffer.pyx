@@ -1084,7 +1084,7 @@ cdef class ReplayBuffer:
             return False
 
     def explore(self,env_factory,policy,post_step,*,
-                pre_add_func = None,
+                pre_add = None,
                 update_policy_func = None,
                 max_episode_step = None,
                 n_env = 64,
@@ -1108,7 +1108,7 @@ cdef class ReplayBuffer:
         post_step : functor
             Function taking returns of `gym.Env.step` (aka. `tuple`) and returning
             `dict` for `ReplayBuffer.add`
-        pre_add_func : functor, optional
+        pre_add : functor, optional
             Function taking `policy` and environment variables and returning `dict`
             for `ReplayBuffer.add`. This functor is intended to calculate TD error.
             If no functor is specified, the environmental variables are added to
@@ -1157,7 +1157,7 @@ cdef class ReplayBuffer:
         env_dict = env_dict or self.env_dict
         self.process = Process(target=explore_func,
                                args=(self,env_dict,env_factory,
-                                     policy,pre_add_func,post_step,
+                                     policy,pre_add,post_step,
                                      n_env,n_parallel,max_episode_step),
                                kwargs={"default_dtype": self.default_dtype,
                                        'obs_name': obs_name,
@@ -1187,7 +1187,7 @@ cdef class ReplayBuffer:
             self.queue.put(weights)
 
 def explore_func(buffer,env_dict,env_factory,
-                 policy,pre_add_func,post_step,
+                 policy,pre_add,post_step,
                  n_env,n_parallel,max_episode_step,default_dtype,*,
                  obs_name='obs',
                  act_name='act',
@@ -1258,8 +1258,8 @@ def explore_func(buffer,env_dict,env_factory,
 
     cdef size_t total_step = 0
 
-    if pre_add_func is None:
-        pre_add_func = lambda p,step,b: b
+    if pre_add is None:
+        pre_add = lambda p,step,b: b
 
     if update_policy_func is None:
         update_policy_func = lambda p,w: None
@@ -1296,7 +1296,7 @@ def explore_func(buffer,env_dict,env_factory,
 
         total_step += 1
 
-        kwargs = pre_add_func(policy,total_step,shared_buffer)
+        kwargs = pre_add(policy,total_step,shared_buffer)
 
         buffer.add(**kwargs)
 
