@@ -1186,6 +1186,14 @@ cdef class ReplayBuffer:
         if self.is_running:
             self.queue.put(weights)
 
+cdef class dummy_queue:
+    def __cinit__(self):
+        pass
+
+    @staticmethod
+    cdef bint empty():
+        return 0
+
 def explore_func(buffer,env_dict,env_factory,
                  policy,pre_add,post_step,
                  n_env,n_parallel,max_episode_step,default_dtype,*,
