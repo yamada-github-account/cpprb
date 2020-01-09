@@ -1297,7 +1297,6 @@ def explore_func(buffer,env_dict,env_factory,
         total_step += 1
 
         kwargs = pre_add(policy,total_step,shared_buffer)
-
         buffer.add(**kwargs)
 
 @cython.boundscheck(False)
