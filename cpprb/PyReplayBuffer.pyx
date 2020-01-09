@@ -1083,7 +1083,7 @@ cdef class ReplayBuffer:
         else:
             return False
 
-    def explore(self,env_factory,policy,post_step_func,*,
+    def explore(self,env_factory,policy,post_step,*,
                 pre_add_func = None,
                 update_policy_func = None,
                 max_episode_step = None,
@@ -1105,7 +1105,7 @@ cdef class ReplayBuffer:
         plicy : functor
             Actor functor to get action(s) from observation(s). The actor must have
             a member function `update(*args)`
-        post_step_func : functor
+        post_step : functor
             Function taking returns of `gym.Env.step` (aka. `tuple`) and returning
             `dict` for `ReplayBuffer.add`
         pre_add_func : functor, optional
@@ -1157,7 +1157,7 @@ cdef class ReplayBuffer:
         env_dict = env_dict or self.env_dict
         self.process = Process(target=explore_func,
                                args=(self,env_dict,env_factory,
-                                     policy,pre_add_func,post_step_func,
+                                     policy,pre_add_func,post_step,
                                      n_env,n_parallel,max_episode_step),
                                kwargs={"default_dtype": self.default_dtype,
                                        'obs_name': obs_name,
@@ -1187,7 +1187,7 @@ cdef class ReplayBuffer:
             self.queue.put(weights)
 
 def explore_func(buffer,env_dict,env_factory,
-                 policy,pre_add_func,post_step_func,
+                 policy,pre_add_func,post_step,
                  n_env,n_parallel,max_episode_step,default_dtype,*,
                  obs_name='obs',
                  act_name='act',
@@ -1232,7 +1232,7 @@ def explore_func(buffer,env_dict,env_factory,
                                           shared_buffer,
                                           waiting_policy,i,
                                           pre_step,
-                                          post_step_func,
+                                          post_step,
                                           i*N_env_sub,
                                           N_env_sub),
                                           kwargs=step_kwargs))
@@ -1290,7 +1290,7 @@ def explore_func(buffer,env_dict,env_factory,
             if done[shift_i] or step[i] >= max_step:
                 obs[shift_i] = envs[i].reset()
                 step[i] = 0
-            for k,v in post_step_func(envs[i].step(pre_step(act[shift_i]))).items():
+            for k,v in post_step(envs[i].step(pre_step(act[shift_i]))).items():
                 shared_buffer[k][shift_i] = v
             step[i] += 1
 
@@ -1303,7 +1303,7 @@ def explore_func(buffer,env_dict,env_factory,
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def _stepping_func(env_factory,shared_buffer,waiting_policy,i_policy,
-                   pre_step,post_step_func,shift,n_env,*,
+                   pre_step,post_step,shift,n_env,*,
                    obs_name = 'obs',
                    act_name = 'act',
                    done_name = 'done',
@@ -1337,7 +1337,7 @@ def _stepping_func(env_factory,shared_buffer,waiting_policy,i_policy,
             if done[i] or step[i] >= max_step:
                 obs[i] = envs[i].reset()
                 step[i] = 0
-            for k,v in post_step_func(envs[i].step(pre_step(act[i]))).items():
+            for k,v in post_step(envs[i].step(pre_step(act[i]))).items():
                 shared_buffer[k][i] = v
             step[i] += 1
 
