@@ -194,10 +194,10 @@ emacs:
   image: iquiw/alpine-emacs
   stage: build
   script:
-    - emacs --batch README.org --debug-init -l site/init.el --eval '(org-hugo-export-wim-to-md :all-subtrees nil t)'
-    - emacs --batch CHANGELOG.org --debug-init -l site/init.el --eval '(org-hugo-export-wim-to-md :all-subtrees nil t)'
+    - emacs --debug-init --batch README.org -l site/init.el --eval '(org-hugo-export-wim-to-md :all-subtrees nil t)'
+    - emacs --debug-init --batch CHANGELOG.org -l site/init.el --eval '(org-hugo-export-wim-to-md :all-subtrees nil t)'
     - cd site
-    - emacs --batch site.org --debug-init -l init.el --eval '(org-hugo-export-wim-to-md :all-subtrees nil t)'
+    - emacs --debug-init --batch site.org -l init.el --eval '(org-hugo-export-wim-to-md :all-subtrees nil t)'
   artifacts:
     paths:
       - site/content
