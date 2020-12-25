@@ -192,9 +192,6 @@ coverage:
 
 emacs:
   image: iquiw/alpine-emacs
-  variables:
-    <<: *global-variables
-    EMACS_PACKAGES: ox-hugo
   stage: build
   script:
     - emacs --batch README.org --eval "(setq debug-on-error t)" -l site/init.el --eval '(org-hugo-export-wim-to-md :all-subtrees nil t)'
